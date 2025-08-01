@@ -46,4 +46,37 @@ contract GameTest is Test {
         vm.expectRevert("Game: Grace period must be greater than zero.");
         new Game(INITIAL_CLAIM_FEE, 0, FEE_INCREASE_PERCENTAGE, PLATFORM_FEE_PERCENTAGE);
     }
+
+    function testPlayerClaimThrone() public {
+        vm.startPrank(player1);
+        vm.expectRevert("Game: Insufficient ETH sent to claim the throne.");
+        game.claimThrone{value: INITIAL_CLAIM_FEE - 0.01 ether}();
+        game.claimThrone{value: 1 ether}();
+        vm.expectRevert("Game: You are already the king. No need to re-claim.");
+        game.claimThrone{value: 1 ether}();
+
+        assertEq(game.currentKing(), player1);
+    }
+
+    function testDeclareWinner() public {
+        vm.startPrank(player1);
+        vm.expectRevert("Game: No one has claimed the throne yet.");
+        game.declareWinner();
+
+        game.claimThrone{value: 1 ether}();
+        vm.expectRevert("Game: Grace period has not expired yet.");
+        game.declareWinner();
+
+        vm.warp(block.timestamp + GRACE_PERIOD + 1 days);
+        game.declareWinner();
+        vm.stopPrank();
+
+        uint256 winnings = game.pendingWinnings(player1);
+        assertEq(winnings, 0.95 ether);
+        assertEq(game.gameEnded(), true);
+    }
+
+    function testResetGame() public {
+
+    }
 }

@@ -183,9 +183,11 @@ contract Game is Ownable {
      * If there's a previous king, a small portion of the new claim fee is sent to them.
      * A portion also goes to the platform owner, and the rest adds to the pot.
      */
+     // @audit-info: where is the logic that sends small portion of new claim fee to the previous king?
     function claimThrone() external payable gameNotEnded nonReentrant {
         require(msg.value >= claimFee, "Game: Insufficient ETH sent to claim the throne.");
-        require(msg.sender == currentKing, "Game: You are already the king. No need to re-claim.");
+        // require(msg.sender == currentKing, "Game: You are already the king. No need to re-claim.");
+        require(msg.sender != currentKing, "Game: You are already the king. No need to re-claim.");
 
         uint256 sentAmount = msg.value;
         uint256 previousKingPayout = 0;
@@ -247,6 +249,7 @@ contract Game is Ownable {
      * @dev Allows the declared winner to withdraw their prize.
      * Uses a secure withdraw pattern with a manual reentrancy guard.
      */
+     // @audit-info: does not really follow secure pattern as CEI not followed, but protected by nonreentrant modifier
     function withdrawWinnings() external nonReentrant {
         uint256 amount = pendingWinnings[msg.sender];
         require(amount > 0, "Game: No winnings to withdraw.");
