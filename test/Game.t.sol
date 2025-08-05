@@ -19,6 +19,14 @@ contract GameTest is Test {
     uint256 public constant FEE_INCREASE_PERCENTAGE = 10; // 10%
     uint256 public constant PLATFORM_FEE_PERCENTAGE = 5; // 5%
 
+    // Events emitted
+    event GameEnded(
+        address indexed winner,
+        uint256 prizeAmount,
+        uint256 timestamp,
+        uint256 round
+    );
+
     function setUp() public {
         deployer = makeAddr("deployer");
         player1 = makeAddr("player1");
@@ -68,6 +76,8 @@ contract GameTest is Test {
         game.declareWinner();
 
         vm.warp(block.timestamp + GRACE_PERIOD + 1 days);
+        vm.expectEmit(true, true, false, true);
+        emit GameEnded(player1, game.pot(), block.timestamp, 1);
         game.declareWinner();
         vm.stopPrank();
 
@@ -77,6 +87,18 @@ contract GameTest is Test {
     }
 
     function testResetGame() public {
+        vm.startPrank(player1);
+        game.claimThrone{value: 1 ether}();
+        vm.warp(block.timestamp + GRACE_PERIOD + 1 days);
+        game.declareWinner();
+        vm.stopPrank();
 
+        vm.prank(deployer);
+        game.resetGame();
+
+        assertEq(game.currentKing(), address(0));
+        assertEq(game.lastClaimTime(), block.timestamp);
+        assertEq(game.pot(), 0);
+        assertEq(game.gameEnded(), false);
     }
 }
